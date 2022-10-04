@@ -27,7 +27,7 @@ func (h *Handler) SignUp(c *gin.Context) {
 		return
 	}
 
-	if err := h.useCase.SignUp(c.Request.Context(), *inp); err != nil {
+	if err := h.useCase.SignUp(*inp); err != nil {
 		c.JSON(http.StatusInternalServerError, signResponse{Message: err.Error()})
 		return
 	}
@@ -43,7 +43,7 @@ func (h *Handler) SignIn(c *gin.Context) {
 		return
 	}
 
-	token, err := h.useCase.SignIn(c.Request.Context(), *inp)
+	token, err := h.useCase.SignIn(*inp)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			c.JSON(http.StatusUnauthorized, signResponse{Message: auth.ErrUserNotFound.Error()})
@@ -64,7 +64,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	err := h.useCase.ChangePassword(c.Request.Context(), *inp)
+	err := h.useCase.ChangePassword(*inp)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			c.JSON(http.StatusUnauthorized, signResponse{Message: auth.ErrUserNotFound.Error()})

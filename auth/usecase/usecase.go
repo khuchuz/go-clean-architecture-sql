@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"context"
 	"crypto/sha1"
 	"fmt"
 	"time"
@@ -20,14 +19,14 @@ type AuthClaims struct {
 }
 
 type AuthUseCase struct {
-	userRepo       itface.UserRepository
+	userRepo       itface.UserRepositorySQL
 	hashSalt       string
 	signingKey     []byte
 	expireDuration time.Duration
 }
 
 func NewAuthUseCase(
-	userRepo itface.UserRepository,
+	userRepo itface.UserRepositorySQL,
 	hashSalt string,
 	signingKey []byte,
 	tokenTTLSeconds time.Duration) *AuthUseCase {
@@ -39,7 +38,7 @@ func NewAuthUseCase(
 	}
 }
 
-func (a *AuthUseCase) SignUp(ctx context.Context, inp entities.SignUpInput) error {
+func (a *AuthUseCase) SignUp(inp entities.SignUpInput) error {
 	pwd := sha1.New()
 	pwd.Write([]byte(inp.Password))
 	pwd.Write([]byte(a.hashSalt))
@@ -47,11 +46,11 @@ func (a *AuthUseCase) SignUp(ctx context.Context, inp entities.SignUpInput) erro
 		return auth.ErrDataTidakLengkap
 	}
 
-	if a.userRepo.IsUserExistByUsername(ctx, inp.Username) {
+	if a.userRepo.SQLIsUserExistByUsername(inp.Username) {
 		return auth.ErrUserDuplicate
 	}
 
-	if a.userRepo.IsUserExistByEmail(ctx, inp.Email) {
+	if a.userRepo.SQLIsUserExistByEmail(inp.Email) {
 		return auth.ErrEmailDuplicate
 	}
 
@@ -61,16 +60,16 @@ func (a *AuthUseCase) SignUp(ctx context.Context, inp entities.SignUpInput) erro
 		Password: fmt.Sprintf("%x", pwd.Sum(nil)),
 	}
 
-	return a.userRepo.CreateUser(ctx, user)
+	return a.userRepo.SQLCreateUser(user)
 }
 
-func (a *AuthUseCase) SignIn(ctx context.Context, inp entities.SignInput) (string, error) {
+func (a *AuthUseCase) SignIn(inp entities.SignInput) (string, error) {
 	pwd := sha1.New()
 	pwd.Write([]byte(inp.Password))
 	pwd.Write([]byte(a.hashSalt))
 	password := fmt.Sprintf("%x", pwd.Sum(nil))
 
-	user, err := a.userRepo.GetUser(ctx, inp.Username, password)
+	user, err := a.userRepo.SQLGetUser(inp.Username, password)
 	if err != nil {
 		return "", auth.ErrUserNotFound
 	}
@@ -87,7 +86,7 @@ func (a *AuthUseCase) SignIn(ctx context.Context, inp entities.SignInput) (strin
 	return token.SignedString(a.signingKey)
 }
 
-func (a *AuthUseCase) ChangePassword(ctx context.Context, inp entities.ChangePasswordInput) error {
+func (a *AuthUseCase) ChangePassword(inp entities.ChangePasswordInput) error {
 	if inp.Username == "" || inp.OldPassword == "" || inp.Password == "" {
 		return auth.ErrDataTidakLengkap
 	}
@@ -104,17 +103,17 @@ func (a *AuthUseCase) ChangePassword(ctx context.Context, inp entities.ChangePas
 	pwd2.Write([]byte(a.hashSalt))
 	password := fmt.Sprintf("%x", pwd2.Sum(nil))
 
-	_, err := a.userRepo.GetUser(ctx, inp.Username, oldpassword)
+	_, err := a.userRepo.SQLGetUser(inp.Username, oldpassword)
 	if err != nil {
 		return auth.ErrUserNotFound
 	}
-	return a.userRepo.UpdatePassword(ctx, inp.Username, password)
+	return a.userRepo.SQLUpdatePassword(inp.Username, password)
 }
 
-func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*models.User, error) {
+func (a *AuthUseCase) ParseToken(accessToken string) (*models.User, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return a.signingKey, nil
 	})

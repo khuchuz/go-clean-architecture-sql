@@ -1,7 +1,8 @@
-package server
+package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,35 +10,36 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/khuchuz/go-clean-architecture-sql/bookmark"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 
 	authhttp "github.com/khuchuz/go-clean-architecture-sql/auth/delivery"
 	itface "github.com/khuchuz/go-clean-architecture-sql/auth/itface"
-	authmongo "github.com/khuchuz/go-clean-architecture-sql/auth/repository"
+	authrepo "github.com/khuchuz/go-clean-architecture-sql/auth/repository"
 	authusecase "github.com/khuchuz/go-clean-architecture-sql/auth/usecase"
-	bmhttp "github.com/khuchuz/go-clean-architecture-sql/bookmark/delivery"
-	bmmongo "github.com/khuchuz/go-clean-architecture-sql/bookmark/repository"
-	bmusecase "github.com/khuchuz/go-clean-architecture-sql/bookmark/usecase"
+	"github.com/khuchuz/go-clean-architecture-sql/models"
 )
+
+func main() {
+
+	app := NewApp()
+
+	if err := app.Run("8000"); err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+}
 
 type App struct {
 	httpServer *http.Server
-
-	bookmarkUC bookmark.UseCase
 	authUC     itface.UseCase
 }
 
 func NewApp() *App {
-	db := initDB()
+	db := SetupDatabase()
 
-	userRepo := authmongo.NewUserRepository(db, "users")
-	bookmarkRepo := bmmongo.NewBookmarkRepository(db, "bookmarks")
+	userRepo := authrepo.InitUserRepositorySQL(db)
 
 	return &App{
-		bookmarkUC: bmusecase.NewBookmarkUseCase(bookmarkRepo),
 		authUC: authusecase.NewAuthUseCase(
 			userRepo,
 			"hash_salt",
@@ -56,14 +58,11 @@ func (a *App) Run(port string) error {
 	)
 
 	// Set up http handlers
-	// SignUp/SignIn endpoints
 	authhttp.RegisterHTTPEndpoints(router, a.authUC)
 
 	// API endpoints
 	authMiddleware := authhttp.NewAuthMiddleware(a.authUC)
-	api := router.Group("/api", authMiddleware)
-
-	bmhttp.RegisterHTTPEndpoints(api, a.bookmarkUC)
+	_ = router.Group("/api", authMiddleware)
 
 	// HTTP Server
 	a.httpServer = &http.Server{
@@ -91,24 +90,19 @@ func (a *App) Run(port string) error {
 	return a.httpServer.Shutdown(ctx)
 }
 
-func initDB() *mongo.Database {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+func SetupDatabase() *gorm.DB {
+	var DBHost string = "127.0.0.1"
+	var DBPort string = "3306"
+	var DBUser string = "root"
+	var DBPass string = ""
+	var DBName string = "go_clean_architecture"
+
+	DSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", DBUser, DBPass, DBHost, DBPort, DBName)
+
+	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
+	db.AutoMigrate(&models.User{})
 	if err != nil {
-		log.Fatalf("Error occured while establishing connection to mongoDB")
+		panic(err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	err = client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = client.Ping(context.Background(), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return client.Database("testdb")
+	return db
 }

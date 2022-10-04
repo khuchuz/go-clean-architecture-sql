@@ -37,7 +37,7 @@ func (m *AuthMiddleware) Handle(c *gin.Context) {
 		return
 	}
 
-	user, err := m.usecase.ParseToken(c.Request.Context(), headerParts[1])
+	user, err := m.usecase.ParseToken(headerParts[1])
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == auth.ErrInvalidAccessToken {

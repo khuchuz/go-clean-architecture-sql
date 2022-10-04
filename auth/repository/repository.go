@@ -1,105 +1,42 @@
 package repository
 
 import (
-	"context"
-
 	"github.com/khuchuz/go-clean-architecture-sql/models"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"gorm.io/gorm"
 )
 
-type User struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty"`
-	Username string             `bson:"username"`
-	Email    string             `bson:"email"`
-	Password string             `bson:"password"`
+type UserRepositorySQL struct {
+	DB *gorm.DB
 }
 
-type UserRepository struct {
-	db *mongo.Collection
+func InitUserRepositorySQL(db *gorm.DB) *UserRepositorySQL {
+	return &UserRepositorySQL{DB: db}
 }
 
-func NewUserRepository(db *mongo.Database, collection string) *UserRepository {
-	return &UserRepository{
-		db: db.Collection(collection),
-	}
+func (r *UserRepositorySQL) SQLCreateUser(user *models.User) error {
+	err := r.DB.Create(&user).Error
+	return err
 }
 
-func (r UserRepository) CreateUser(ctx context.Context, user *models.User) error {
-	model := toMongoUser(user)
-	res, err := r.db.InsertOne(ctx, model)
-	if err != nil {
-		return err
-	}
-
-	user.ID = res.InsertedID.(primitive.ObjectID).Hex()
-	return nil
+func (r *UserRepositorySQL) SQLGetUser(username, password string) (*models.User, error) {
+	user := new(models.User)
+	err := r.DB.Where("username = ?", username).Where("password = ?", password).First(&user).Error
+	return user, err
 }
 
-func (r UserRepository) GetUser(ctx context.Context, username, password string) (*models.User, error) {
-	user := new(User)
-	err := r.db.FindOne(ctx, bson.M{
-		"username": username,
-		"password": password,
-	}).Decode(user)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return toModel(user), nil
+func (r *UserRepositorySQL) SQLUpdatePassword(username, password string) error {
+	err := r.DB.Model(&models.User{}).Where("username = ?", username).Update("password", password).Error
+	return err
 }
 
-func (r UserRepository) UpdatePassword(ctx context.Context, username, password string) error {
-	_, err := r.db.UpdateOne(ctx,
-		bson.M{"username": username},
-		bson.D{
-			{"$set", bson.D{{"password", password}}},
-		})
-	if err != nil {
-		return err
-	}
-	return nil
+func (r *UserRepositorySQL) SQLIsUserExistByUsername(username string) bool {
+	user := new(models.User)
+	ret := r.DB.Where("username = ?", username).First(&user)
+	return ret.Error == nil
 }
 
-func (r UserRepository) IsUserExistByUsername(ctx context.Context, username string) bool {
-	user := new(User)
-	err := r.db.FindOne(ctx, bson.M{
-		"username": username,
-	}).Decode(user)
-
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func (r UserRepository) IsUserExistByEmail(ctx context.Context, email string) bool {
-	user := new(User)
-	err := r.db.FindOne(ctx, bson.M{
-		"email": email,
-	}).Decode(user)
-
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func toMongoUser(u *models.User) *User {
-	return &User{
-		Username: u.Username,
-		Email:    u.Email,
-		Password: u.Password,
-	}
-}
-
-func toModel(u *User) *models.User {
-	return &models.User{
-		ID:       u.ID.Hex(),
-		Username: u.Username,
-		Email:    u.Email,
-		Password: u.Password,
-	}
+func (r *UserRepositorySQL) SQLIsUserExistByEmail(email string) bool {
+	user := new(models.User)
+	ret := r.DB.Where("email = ?", email).First(&user)
+	return ret.Error == nil
 }

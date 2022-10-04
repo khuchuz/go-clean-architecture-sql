@@ -55,7 +55,7 @@ func (s *Suite) TestSQLCreateUser_Success() {
 	s.mock.ExpectBegin() // start transaction
 	s.mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `users` (`username`,`email`,`password`) VALUES (?,?,?)")).
 		WithArgs(user.Username, user.Email, user.Password).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	s.mock.ExpectCommit() // commit transaction
 
 	err := s.userRepositorySQL.SQLCreateUser(user)
@@ -87,9 +87,7 @@ func (s *Suite) TestSQLGetUser_Failed_NotExist() {
 		password = hashThis("Password10")
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
-		WithArgs(username, password).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password"}))
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).WithArgs(username, password).WillReturnError(gorm.ErrRecordNotFound)
 
 	res, err := s.userRepositorySQL.SQLGetUser(username, password)
 	if assert.Error(s.T(), err) {
@@ -227,28 +225,6 @@ func (s *Suite) TestSQLDeleteUser_Failed_Select() {
 
 	err := s.userRepositorySQL.SQLDeleteUser(username, password)
 	require.Error(s.T(), err, gorm.ErrRecordNotFound)
-}
-
-func (s *Suite) TestSQLDeleteUser_Failed_Delete() {
-	var (
-		id       = 10
-		username = "dummy10"
-		email    = "akun10@email.com"
-		password = hashThis("Password10")
-	)
-	rows := sqlmock.NewRows([]string{"id", "username", "email", "password"}).AddRow(id, username, email, password)
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
-		WithArgs(username, password).
-		WillReturnRows(rows)
-
-	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
-		WithArgs(username, password).WillReturnResult(sqlmock.NewResult(1, 1))
-	s.mock.ExpectCommit()
-
-	err := s.userRepositorySQL.SQLDeleteUser(username, password)
-
-	require.NoError(s.T(), err)
 }
 
 func hashThis(password string) string {

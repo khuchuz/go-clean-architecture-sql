@@ -2,15 +2,15 @@ package models
 
 type User struct {
 	ID       uint   `gorm:"primaryKey"`
-	Username string `bson:"username"`
-	Email    string `bson:"email"`
-	Password string `bson:"password"`
+	Username string `gorm:"uniqueIndex"`
+	Email    string `gorm:"uniqueIndex"`
+	Password string
 }
 
 type Register struct {
-	Username string `bson:"username"`
-	Email    string `bson:"email"`
-	Password string `bson:"password"`
+	Username string
+	Email    string
+	Password string
 }
 
 type SignInput struct {

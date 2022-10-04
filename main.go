@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,14 +9,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 
-	authhttp "github.com/khuchuz/go-clean-architecture-sql/auth/delivery"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/app/database"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/controllers"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/services"
 	authrepo "github.com/khuchuz/go-clean-architecture-sql/auth/services/repository"
 	authusecase "github.com/khuchuz/go-clean-architecture-sql/auth/services/usecase"
-	"github.com/khuchuz/go-clean-architecture-sql/models"
 )
 
 func main() {
@@ -31,11 +28,11 @@ func main() {
 
 type App struct {
 	httpServer *http.Server
-	authUC     itface.UseCase
+	authUC     services.UseCase
 }
 
 func NewApp() *App {
-	db := SetupDatabase()
+	db := database.SetupDatabase()
 
 	userRepo := authrepo.InitUserRepositorySQL(db)
 
@@ -50,6 +47,8 @@ func NewApp() *App {
 }
 
 func (a *App) Run(port string) error {
+	// To Disable debug
+	//gin.SetMode(gin.ReleaseMode)
 	// Init gin handler
 	router := gin.Default()
 	router.Use(
@@ -58,10 +57,10 @@ func (a *App) Run(port string) error {
 	)
 
 	// Set up http handlers
-	authhttp.RegisterHTTPEndpoints(router, a.authUC)
+	controllers.RegisterHTTPEndpoints(router, a.authUC)
 
 	// API endpoints
-	authMiddleware := authhttp.NewAuthMiddleware(a.authUC)
+	authMiddleware := controllers.NewAuthMiddleware(a.authUC)
 	_ = router.Group("/api", authMiddleware)
 
 	// HTTP Server
@@ -88,21 +87,4 @@ func (a *App) Run(port string) error {
 	defer shutdown()
 
 	return a.httpServer.Shutdown(ctx)
-}
-
-func SetupDatabase() *gorm.DB {
-	var DBHost string = "127.0.0.1"
-	var DBPort string = "3306"
-	var DBUser string = "root"
-	var DBPass string = ""
-	var DBName string = "go_clean_architecture"
-
-	DSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", DBUser, DBPass, DBHost, DBPort, DBName)
-
-	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
-	db.AutoMigrate(&models.User{})
-	if err != nil {
-		panic(err)
-	}
-	return db
 }

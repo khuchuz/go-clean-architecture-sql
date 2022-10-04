@@ -1,4 +1,4 @@
-package delivery
+package controllers
 
 import (
 	"bytes"
@@ -10,18 +10,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
-	"github.com/khuchuz/go-clean-architecture-sql/auth/entities"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/services/usecase/mock"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSignUp_Success_200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	signUpBody := &entities.SignUpInput{
+	signUpBody := &models.SignUpInput{
 		Username: "testuser",
 		Email:    "testuser@gmail.com",
 		Password: "testpass",
@@ -40,6 +41,7 @@ func TestSignUp_Success_200(t *testing.T) {
 }
 
 func TestSignUp_Failed_400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
@@ -55,12 +57,13 @@ func TestSignUp_Failed_400(t *testing.T) {
 	assert.Equal(t, 400, w.Code)
 }
 func TestSignUp_Failed_500(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	signUpBody := &entities.SignUpInput{
+	signUpBody := &models.SignUpInput{
 		Username: "testuser",
 		Email:    "testuser@gmail.com",
 		Password: "testpass",
@@ -78,12 +81,13 @@ func TestSignUp_Failed_500(t *testing.T) {
 	assert.Equal(t, 500, w.Code)
 }
 func TestSignIn_Sucess_200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	signInBody := &entities.SignInput{
+	signInBody := &models.SignInput{
 		Username: "testuser",
 		Password: "testpass",
 	}
@@ -102,6 +106,7 @@ func TestSignIn_Sucess_200(t *testing.T) {
 }
 
 func TestSignIn_Failed_400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
@@ -117,12 +122,13 @@ func TestSignIn_Failed_400(t *testing.T) {
 	assert.Equal(t, 400, w.Code)
 }
 func TestSignIn_ErrUserNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	signInBody := &entities.SignInput{
+	signInBody := &models.SignInput{
 		Username: "testuser",
 		Password: "testpass",
 	}
@@ -141,12 +147,13 @@ func TestSignIn_ErrUserNotFound(t *testing.T) {
 }
 
 func TestSignIn_ErrUnknown(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	signInBody := &entities.SignInput{
+	signInBody := &models.SignInput{
 		Username: "testuser",
 		Password: "testpass",
 	}
@@ -165,12 +172,13 @@ func TestSignIn_ErrUnknown(t *testing.T) {
 }
 
 func TestChangePassword_ErrUserNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	changePassBody := &entities.ChangePasswordInput{
+	changePassBody := &models.ChangePasswordInput{
 		Username:    "testuser",
 		Password:    "newpass",
 		OldPassword: "testpass",
@@ -190,12 +198,13 @@ func TestChangePassword_ErrUserNotFound(t *testing.T) {
 }
 
 func TestChangePassword_ErrUnknown(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	changePassBody := &entities.ChangePasswordInput{
+	changePassBody := &models.ChangePasswordInput{
 		Username:    "testuser",
 		Password:    "newpass",
 		OldPassword: "testpass",
@@ -215,12 +224,13 @@ func TestChangePassword_ErrUnknown(t *testing.T) {
 }
 
 func TestChangePassword_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	changePassBody := &entities.ChangePasswordInput{
+	changePassBody := &models.ChangePasswordInput{
 		Username:    "testuser",
 		Password:    "newpass",
 		OldPassword: "testpass",
@@ -240,6 +250,7 @@ func TestChangePassword_Success(t *testing.T) {
 }
 
 func TestChangePassword_Failed_400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
@@ -255,12 +266,13 @@ func TestChangePassword_Failed_400(t *testing.T) {
 	assert.Equal(t, 400, w.Code)
 }
 func TestDeleteUser_Sucess_200(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	deleteMeBody := &entities.DeleteInput{
+	deleteMeBody := &models.DeleteInput{
 		Username: "testuser",
 		Password: "testpass",
 	}
@@ -279,6 +291,7 @@ func TestDeleteUser_Sucess_200(t *testing.T) {
 }
 
 func TestDeleteUser_Failed_400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
@@ -294,12 +307,13 @@ func TestDeleteUser_Failed_400(t *testing.T) {
 	assert.Equal(t, 400, w.Code)
 }
 func TestDeleteUser_ErrUserNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	deleteMeBody := &entities.DeleteInput{
+	deleteMeBody := &models.DeleteInput{
 		Username: "testuser",
 		Password: "testpass",
 	}
@@ -318,12 +332,13 @@ func TestDeleteUser_ErrUserNotFound(t *testing.T) {
 }
 
 func TestDeleteUser_ErrUnknown(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	uc := new(mock.AuthUseCaseMock)
 
 	RegisterHTTPEndpoints(r, uc)
 
-	deleteMeBody := &entities.DeleteInput{
+	deleteMeBody := &models.DeleteInput{
 		Username: "testuser",
 		Password: "testpass",
 	}

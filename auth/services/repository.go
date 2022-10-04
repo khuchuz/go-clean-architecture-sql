@@ -1,7 +1,7 @@
-package itface
+package services
 
 import (
-	"github.com/khuchuz/go-clean-architecture-sql/models"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
 )
 
 type UserRepositorySQL interface {

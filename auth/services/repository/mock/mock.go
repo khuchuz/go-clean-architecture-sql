@@ -1,7 +1,7 @@
 package mock
 
 import (
-	"github.com/khuchuz/go-clean-architecture-sql/models"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
 	"github.com/stretchr/testify/mock"
 )
 

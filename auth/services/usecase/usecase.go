@@ -1,16 +1,14 @@
 package usecase
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"time"
 
-	"github.com/khuchuz/go-clean-architecture-sql/models"
-
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
-	"github.com/khuchuz/go-clean-architecture-sql/auth/entities"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/services"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/utils"
 )
 
 type AuthClaims struct {
@@ -19,29 +17,27 @@ type AuthClaims struct {
 }
 
 type AuthUseCase struct {
-	userRepo       itface.UserRepositorySQL
+	userRepo       services.UserRepositorySQL
 	hashSalt       string
 	signingKey     []byte
 	expireDuration time.Duration
 }
 
 func NewAuthUseCase(
-	userRepo itface.UserRepositorySQL,
+	userRepo services.UserRepositorySQL,
 	hashSalt string,
 	signingKey []byte,
-	tokenTTLSeconds time.Duration) *AuthUseCase {
+	tokenTTL time.Duration) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo:       userRepo,
 		hashSalt:       hashSalt,
 		signingKey:     signingKey,
-		expireDuration: time.Second * tokenTTLSeconds,
+		expireDuration: time.Second * tokenTTL,
 	}
 }
 
-func (a *AuthUseCase) SignUp(inp entities.SignUpInput) error {
-	pwd := sha1.New()
-	pwd.Write([]byte(inp.Password))
-	pwd.Write([]byte(a.hashSalt))
+func (a *AuthUseCase) SignUp(inp models.SignUpInput) error {
+
 	if inp.Username == "" || inp.Email == "" || inp.Password == "" {
 		return auth.ErrDataTidakLengkap
 	}
@@ -57,17 +53,15 @@ func (a *AuthUseCase) SignUp(inp entities.SignUpInput) error {
 	user := &models.User{
 		Username: inp.Username,
 		Email:    inp.Email,
-		Password: fmt.Sprintf("%x", pwd.Sum(nil)),
+		Password: utils.HashThis(inp.Password, a.hashSalt),
 	}
 
 	return a.userRepo.SQLCreateUser(user)
 }
 
-func (a *AuthUseCase) SignIn(inp entities.SignInput) (string, error) {
-	pwd := sha1.New()
-	pwd.Write([]byte(inp.Password))
-	pwd.Write([]byte(a.hashSalt))
-	password := fmt.Sprintf("%x", pwd.Sum(nil))
+func (a *AuthUseCase) SignIn(inp models.SignInput) (string, error) {
+
+	password := utils.HashThis(inp.Password, a.hashSalt)
 
 	user, err := a.userRepo.SQLGetUser(inp.Username, password)
 	if err != nil {
@@ -86,22 +80,16 @@ func (a *AuthUseCase) SignIn(inp entities.SignInput) (string, error) {
 	return token.SignedString(a.signingKey)
 }
 
-func (a *AuthUseCase) ChangePassword(inp entities.ChangePasswordInput) error {
+func (a *AuthUseCase) ChangePassword(inp models.ChangePasswordInput) error {
 	if inp.Username == "" || inp.OldPassword == "" || inp.Password == "" {
 		return auth.ErrDataTidakLengkap
 	}
 	if inp.OldPassword == inp.Password {
 		return auth.ErrPasswordSame
 	}
-	pwd := sha1.New()
-	pwd.Write([]byte(inp.OldPassword))
-	pwd.Write([]byte(a.hashSalt))
-	oldpassword := fmt.Sprintf("%x", pwd.Sum(nil))
 
-	pwd2 := sha1.New()
-	pwd2.Write([]byte(inp.Password))
-	pwd2.Write([]byte(a.hashSalt))
-	password := fmt.Sprintf("%x", pwd2.Sum(nil))
+	oldpassword := utils.HashThis(inp.OldPassword, a.hashSalt)
+	password := utils.HashThis(inp.Password, a.hashSalt)
 
 	_, err := a.userRepo.SQLGetUser(inp.Username, oldpassword)
 	if err != nil {
@@ -110,11 +98,8 @@ func (a *AuthUseCase) ChangePassword(inp entities.ChangePasswordInput) error {
 	return a.userRepo.SQLUpdatePassword(inp.Username, password)
 }
 
-func (a *AuthUseCase) DeleteAccount(inp entities.DeleteInput) error {
-	pwd := sha1.New()
-	pwd.Write([]byte(inp.Password))
-	pwd.Write([]byte(a.hashSalt))
-	password := fmt.Sprintf("%x", pwd.Sum(nil))
+func (a *AuthUseCase) DeleteAccount(inp models.DeleteInput) error {
+	password := utils.HashThis(inp.Password, a.hashSalt)
 
 	err := a.userRepo.SQLDeleteUser(inp.Username, password)
 	if err != nil {

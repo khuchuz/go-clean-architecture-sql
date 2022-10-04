@@ -9,7 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-test/deep"
-	"github.com/khuchuz/go-clean-architecture-sql/models"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

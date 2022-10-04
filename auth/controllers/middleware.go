@@ -1,4 +1,4 @@
-package delivery
+package controllers
 
 import (
 	"net/http"
@@ -6,14 +6,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/services"
 )
 
 type AuthMiddleware struct {
-	usecase itface.UseCase
+	usecase services.UseCase
 }
 
-func NewAuthMiddleware(usecase itface.UseCase) gin.HandlerFunc {
+func NewAuthMiddleware(usecase services.UseCase) gin.HandlerFunc {
 	return (&AuthMiddleware{
 		usecase: usecase,
 	}).Handle
@@ -22,18 +23,18 @@ func NewAuthMiddleware(usecase itface.UseCase) gin.HandlerFunc {
 func (m *AuthMiddleware) Handle(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, signResponse{Message: auth.ErrUnauthorized.Error()})
+		c.JSON(http.StatusUnauthorized, models.SignResponse{Message: auth.ErrUnauthorized.Error()})
 		return
 	}
 
 	headerParts := strings.Split(authHeader, " ")
 	if len(headerParts) != 2 {
-		c.JSON(http.StatusUnauthorized, signResponse{Message: auth.ErrUnauthorized.Error()})
+		c.JSON(http.StatusUnauthorized, models.SignResponse{Message: auth.ErrUnauthorized.Error()})
 		return
 	}
 
 	if headerParts[0] != "Bearer" {
-		c.JSON(http.StatusUnauthorized, signResponse{Message: auth.ErrUnauthorized.Error()})
+		c.JSON(http.StatusUnauthorized, models.SignResponse{Message: auth.ErrUnauthorized.Error()})
 		return
 	}
 
@@ -44,9 +45,9 @@ func (m *AuthMiddleware) Handle(c *gin.Context) {
 			status = http.StatusUnauthorized
 		}
 
-		c.JSON(status, signResponse{Message: auth.ErrUnknown.Error()})
+		c.JSON(status, models.SignResponse{Message: auth.ErrUnknown.Error()})
 		return
 	}
 
-	c.Set(itface.CtxUserKey, user)
+	c.Set(services.CtxUserKey, user)
 }

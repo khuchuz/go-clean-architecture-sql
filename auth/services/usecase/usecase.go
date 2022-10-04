@@ -110,6 +110,19 @@ func (a *AuthUseCase) ChangePassword(inp entities.ChangePasswordInput) error {
 	return a.userRepo.SQLUpdatePassword(inp.Username, password)
 }
 
+func (a *AuthUseCase) DeleteAccount(inp entities.DeleteInput) error {
+	pwd := sha1.New()
+	pwd.Write([]byte(inp.Password))
+	pwd.Write([]byte(a.hashSalt))
+	password := fmt.Sprintf("%x", pwd.Sum(nil))
+
+	err := a.userRepo.SQLDeleteUser(inp.Username, password)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *AuthUseCase) ParseToken(accessToken string) (*models.User, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

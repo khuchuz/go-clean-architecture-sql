@@ -22,6 +22,12 @@ func (m *AuthUseCaseMock) SignIn(inp entities.SignInput) (string, error) {
 	return args.Get(0).(string), args.Error(1)
 }
 
+func (m *AuthUseCaseMock) DeleteAccount(inp entities.DeleteInput) error {
+	args := m.Called(inp.Username, inp.Password)
+
+	return args.Error(0)
+}
+
 func (m *AuthUseCaseMock) ChangePassword(inp entities.ChangePasswordInput) error {
 	args := m.Called(inp.Username, inp.OldPassword, inp.Password)
 

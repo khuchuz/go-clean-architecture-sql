@@ -10,4 +10,5 @@ type UserRepositorySQL interface {
 	SQLIsUserExistByUsername(username string) bool
 	SQLIsUserExistByEmail(email string) bool
 	SQLUpdatePassword(username, password string) error
+	SQLDeleteUser(username, password string) error
 }

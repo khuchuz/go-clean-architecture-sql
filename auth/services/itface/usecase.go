@@ -12,4 +12,5 @@ type UseCase interface {
 	SignIn(inp entities.SignInput) (string, error)
 	ChangePassword(inp entities.ChangePasswordInput) error
 	ParseToken(accessToken string) (*models.User, error)
+	DeleteAccount(inp entities.DeleteInput) error
 }

@@ -76,3 +76,24 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, signResponse{Message: "Password berhasil diubah"})
 }
+
+func (h *Handler) DeleteAccount(c *gin.Context) {
+	inp := new(entities.DeleteInput)
+
+	if err := c.BindJSON(inp); err != nil {
+		c.JSON(http.StatusBadRequest, signResponse{Message: auth.ErrBadRequest.Error()})
+		return
+	}
+
+	err := h.useCase.DeleteAccount(*inp)
+	if err != nil {
+		if err.Error() == "record not found" {
+			c.JSON(http.StatusUnauthorized, signResponse{Message: auth.ErrUserNotFound.Error()})
+			return
+		}
+		c.JSON(http.StatusUnauthorized, signResponse{Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, signResponse{Message: "Akun berhasil dihapus"})
+}

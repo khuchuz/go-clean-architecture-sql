@@ -138,7 +138,9 @@ func (s *Suite) TestSQLUpdatePassword() {
 		password = hashThis("Password12")
 	)
 	s.mock.ExpectBegin() // start transaction
-	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ?")).WithArgs(password, username).WillReturnResult(sqlmock.NewResult(0, 1))
+	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ?")).
+		WithArgs(password, username).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	s.mock.ExpectCommit() // commit transaction
 	err := s.userRepositorySQL.SQLUpdatePassword(username, password)
 	s.NoError(err)

@@ -38,3 +38,9 @@ func (s *UserStorageMock) SQLIsUserExistByEmail(email string) bool {
 
 	return args.Bool(0)
 }
+
+func (s *UserStorageMock) SQLDeleteUser(username, password string) error {
+	args := s.Called(username, password)
+
+	return args.Error(0)
+}

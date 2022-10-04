@@ -13,5 +13,6 @@ func RegisterHTTPEndpoints(router *gin.Engine, uc itface.UseCase) {
 		authEndpoints.POST("/sign-up", h.SignUp)
 		authEndpoints.POST("/sign-in", h.SignIn)
 		authEndpoints.POST("/change-pass", h.ChangePassword)
+		authEndpoints.POST("/delete-me", h.DeleteAccount)
 	}
 }

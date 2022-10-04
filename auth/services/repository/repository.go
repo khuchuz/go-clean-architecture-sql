@@ -40,3 +40,13 @@ func (r *UserRepositorySQL) SQLIsUserExistByEmail(email string) bool {
 	ret := r.DB.Where("email = ?", email).First(&user)
 	return ret.Error == nil
 }
+
+func (r *UserRepositorySQL) SQLDeleteUser(username, password string) error {
+	user := new(models.User)
+	cek := r.DB.Where("username = ?", username).Where("password = ?", password).First(&user)
+	if cek.Error != nil {
+		return cek.Error
+	}
+	err := r.DB.Where("username = ?", username).Where("password = ?", password).Delete(&models.User{}).Error
+	return err
+}

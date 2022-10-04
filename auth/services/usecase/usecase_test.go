@@ -313,3 +313,41 @@ func Test_ChangePassword_Failed_EqualNewOld(t *testing.T) {
 	err := uc.ChangePassword(entities.ChangePasswordInput{Username: username, OldPassword: password, Password: password})
 	assert.EqualError(t, err, "password baru tidak boleh sama dengan password lama")
 }
+
+func Test_DeleteUser_Success(t *testing.T) {
+	repo := new(mock.UserStorageMock)
+	uc := NewAuthUseCase(repo, "salt", []byte("secret"), 86400)
+	var (
+		username = "usermock"
+		password = "pass"
+
+		user = &models.User{
+			Username: username,
+			Password: "11f5639f22525155cb0b43573ee4212838c78d87", // sha1 of pass+salt
+		}
+	)
+
+	// Delete User
+	repo.On("SQLDeleteUser", user.Username, user.Password).Return(nil)
+	err := uc.DeleteAccount(entities.DeleteInput{Username: username, Password: password})
+	assert.NoError(t, err)
+}
+
+func Test_DeleteUser_Failed(t *testing.T) {
+	repo := new(mock.UserStorageMock)
+	uc := NewAuthUseCase(repo, "salt", []byte("secret"), 86400)
+	var (
+		username = "usermock"
+		password = "pass"
+
+		user = &models.User{
+			Username: username,
+			Password: "11f5639f22525155cb0b43573ee4212838c78d87", // sha1 of pass+salt
+		}
+	)
+
+	// Delete User
+	repo.On("SQLDeleteUser", user.Username, user.Password).Return(auth.ErrUnknown)
+	err := uc.DeleteAccount(entities.DeleteInput{Username: username, Password: password})
+	assert.Error(t, err, auth.ErrUserNotFound)
+}

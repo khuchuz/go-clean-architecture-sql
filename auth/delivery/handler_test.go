@@ -254,3 +254,89 @@ func TestChangePassword_Failed_400(t *testing.T) {
 
 	assert.Equal(t, 400, w.Code)
 }
+func TestDeleteUser_Sucess_200(t *testing.T) {
+	r := gin.Default()
+	uc := new(mock.AuthUseCaseMock)
+
+	RegisterHTTPEndpoints(r, uc)
+
+	deleteMeBody := &entities.DeleteInput{
+		Username: "testuser",
+		Password: "testpass",
+	}
+
+	body, err := json.Marshal(deleteMeBody)
+	assert.NoError(t, err)
+
+	uc.On("DeleteAccount", deleteMeBody.Username, deleteMeBody.Password).Return(nil)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/auth/delete-me", bytes.NewBuffer(body))
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, "{\"message\":\"Akun berhasil dihapus\"}", w.Body.String())
+}
+
+func TestDeleteUser_Failed_400(t *testing.T) {
+	r := gin.Default()
+	uc := new(mock.AuthUseCaseMock)
+
+	RegisterHTTPEndpoints(r, uc)
+
+	body, err := json.Marshal("not json")
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/auth/delete-me", bytes.NewBuffer(body))
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, 400, w.Code)
+}
+func TestDeleteUser_ErrUserNotFound(t *testing.T) {
+	r := gin.Default()
+	uc := new(mock.AuthUseCaseMock)
+
+	RegisterHTTPEndpoints(r, uc)
+
+	deleteMeBody := &entities.DeleteInput{
+		Username: "testuser",
+		Password: "testpass",
+	}
+
+	body, err := json.Marshal(deleteMeBody)
+	assert.NoError(t, err)
+
+	uc.On("DeleteAccount", deleteMeBody.Username, deleteMeBody.Password).Return(errors.New("record not found"))
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/auth/delete-me", bytes.NewBuffer(body))
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code)
+	assert.Equal(t, "{\"message\":\"user not found\"}", w.Body.String())
+}
+
+func TestDeleteUser_ErrUnknown(t *testing.T) {
+	r := gin.Default()
+	uc := new(mock.AuthUseCaseMock)
+
+	RegisterHTTPEndpoints(r, uc)
+
+	deleteMeBody := &entities.DeleteInput{
+		Username: "testuser",
+		Password: "testpass",
+	}
+
+	body, err := json.Marshal(deleteMeBody)
+	assert.NoError(t, err)
+
+	uc.On("DeleteAccount", deleteMeBody.Username, deleteMeBody.Password).Return(auth.ErrUnknown)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/auth/delete-me", bytes.NewBuffer(body))
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code)
+	assert.Equal(t, "{\"message\":\"unknown error\"}", w.Body.String())
+}

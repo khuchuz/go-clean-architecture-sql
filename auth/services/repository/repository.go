@@ -43,10 +43,10 @@ func (r *UserRepositorySQL) SQLIsUserExistByEmail(email string) bool {
 
 func (r *UserRepositorySQL) SQLDeleteUser(username, password string) error {
 	user := new(models.User)
-	cek := r.DB.Where("username = ?", username).Where("password = ?", password).First(&user)
-	if cek.Error != nil {
-		return cek.Error
+	err := r.DB.Where("username = ?", username).Where("password = ?", password).First(&user).Error
+	if err != nil {
+		return err
 	}
-	err := r.DB.Where("username = ?", username).Where("password = ?", password).Delete(&models.User{}).Error
+	err = r.DB.Where("username = ?", username).Where("password = ?", password).Delete(&models.User{}).Error
 	return err
 }

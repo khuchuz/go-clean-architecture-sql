@@ -146,6 +146,43 @@ func (s *Suite) TestSQLUpdatePassword() {
 	s.NoError(err)
 }
 
+func (s *Suite) TestSQLDeleteUser_Success() {
+	var (
+		id       = 10
+		username = "dummy10"
+		email    = "akun10@email.com"
+		password = hashThis("Password10")
+	)
+	rows := sqlmock.NewRows([]string{"id", "username", "email", "password"}).AddRow(id, username, email, password)
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).
+		WillReturnRows(rows)
+
+	s.mock.ExpectBegin()
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectCommit()
+
+	err := s.userRepositorySQL.SQLDeleteUser(username, password)
+
+	require.NoError(s.T(), err)
+}
+
+func (s *Suite) TestSQLDeleteUser_Failed_Select() {
+	var (
+		username = "dummy10"
+		password = hashThis("Password10")
+	)
+	rows := sqlmock.NewRows([]string{"id", "username", "email", "password"})
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).
+		WillReturnRows(rows)
+
+	err := s.userRepositorySQL.SQLDeleteUser(username, password)
+
+	require.Error(s.T(), err, "record not found")
+}
+
 func hashThis(password string) string {
 	pwd := sha1.New()
 	pwd.Write([]byte(password))

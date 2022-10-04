@@ -14,9 +14,9 @@ import (
 	"gorm.io/gorm"
 
 	authhttp "github.com/khuchuz/go-clean-architecture-sql/auth/delivery"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/itface"
-	authrepo "github.com/khuchuz/go-clean-architecture-sql/auth/repository"
-	authusecase "github.com/khuchuz/go-clean-architecture-sql/auth/usecase"
+	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
+	authrepo "github.com/khuchuz/go-clean-architecture-sql/auth/services/repository"
+	authusecase "github.com/khuchuz/go-clean-architecture-sql/auth/services/usecase"
 	"github.com/khuchuz/go-clean-architecture-sql/models"
 )
 

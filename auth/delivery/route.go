@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"github.com/gin-gonic/gin"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/itface"
+	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
 )
 
 func RegisterHTTPEndpoints(router *gin.Engine, uc itface.UseCase) {

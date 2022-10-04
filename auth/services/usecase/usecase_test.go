@@ -5,7 +5,7 @@ import (
 
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/entities"
-	"github.com/khuchuz/go-clean-architecture-sql/auth/repository/mock"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/services/repository/mock"
 	"github.com/khuchuz/go-clean-architecture-sql/models"
 	"github.com/stretchr/testify/assert"
 )

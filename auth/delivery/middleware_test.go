@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
-	"github.com/khuchuz/go-clean-architecture-sql/auth/usecase/mock"
+	"github.com/khuchuz/go-clean-architecture-sql/auth/services/usecase/mock"
 	"github.com/khuchuz/go-clean-architecture-sql/models"
 	"github.com/stretchr/testify/assert"
 )

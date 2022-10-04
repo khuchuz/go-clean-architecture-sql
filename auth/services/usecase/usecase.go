@@ -10,7 +10,7 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/entities"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/itface"
+	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
 )
 
 type AuthClaims struct {

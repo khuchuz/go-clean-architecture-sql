@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/entities"
-	itface "github.com/khuchuz/go-clean-architecture-sql/auth/itface"
+	itface "github.com/khuchuz/go-clean-architecture-sql/auth/services/itface"
 )
 
 type Handler struct {

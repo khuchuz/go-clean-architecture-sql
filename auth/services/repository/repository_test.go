@@ -81,7 +81,7 @@ func (s *Suite) TestSQLGetUser() {
 	require.Nil(s.T(), deep.Equal(&models.User{ID: res.ID, Username: username, Email: email, Password: password}, res))
 }
 
-func (s *Suite) TestSQLIsUserExistByUsername() {
+func (s *Suite) TestSQLIsUserExistByUsername_True() {
 	var (
 		id       = 11
 		username = "dummy11"
@@ -98,7 +98,24 @@ func (s *Suite) TestSQLIsUserExistByUsername() {
 	require.Equal(s.T(), true, res)
 }
 
-func (s *Suite) TestSQLIsUserExistByEmail() {
+func (s *Suite) TestSQLIsUserExistByUsername_False() {
+	var (
+		id       = 11
+		username = "dummy11"
+		email    = "akun11@email.com"
+		password = hashThis("Password11")
+	)
+
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ?")).
+		WithArgs(username).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password"}).
+			AddRow(id, username, email, password))
+
+	res := s.userRepositorySQL.SQLIsUserExistByUsername(username)
+	require.Equal(s.T(), true, res)
+}
+
+func (s *Suite) TestSQLIsUserExistByEmail_True() {
 	var (
 		id       = 12
 		username = "dummy12"

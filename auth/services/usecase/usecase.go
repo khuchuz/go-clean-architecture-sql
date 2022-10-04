@@ -91,11 +91,7 @@ func (a *AuthUseCase) ChangePassword(inp models.ChangePasswordInput) error {
 	oldpassword := utils.HashThis(inp.OldPassword, a.hashSalt)
 	password := utils.HashThis(inp.Password, a.hashSalt)
 
-	_, err := a.userRepo.SQLGetUser(inp.Username, oldpassword)
-	if err != nil {
-		return auth.ErrUserNotFound
-	}
-	return a.userRepo.SQLUpdatePassword(inp.Username, password)
+	return a.userRepo.SQLUpdatePassword(inp.Username, oldpassword, password)
 }
 
 func (a *AuthUseCase) DeleteAccount(inp models.DeleteInput) error {

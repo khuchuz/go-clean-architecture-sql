@@ -7,6 +7,7 @@ import (
 	"github.com/khuchuz/go-clean-architecture-sql/auth"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/services"
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -66,8 +67,8 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 	err := h.useCase.ChangePassword(*inp)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
-			c.JSON(http.StatusUnauthorized, models.SignResponse{Message: auth.ErrUserNotFound.Error()})
+		if err == gorm.ErrInvalidTransaction {
+			c.JSON(http.StatusUnauthorized, models.SignResponse{Message: auth.ErrInvalidCreds.Error()})
 			return
 		}
 		c.JSON(http.StatusUnauthorized, models.SignResponse{Message: auth.ErrUnknown.Error()})

@@ -7,6 +7,7 @@ import (
 	"github.com/khuchuz/go-clean-architecture-sql/auth/models"
 	"github.com/khuchuz/go-clean-architecture-sql/auth/services/repository/mock"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 func Test_SignUp_Success(t *testing.T) {
@@ -247,8 +248,7 @@ func Test_ChangePassword_Sucess(t *testing.T) {
 	)
 
 	// Change Password
-	repo.On("SQLGetUser", user.Username, user.Password).Return(user, nil)
-	repo.On("SQLUpdatePassword", user.Username, newpasscrypt).Return(nil)
+	repo.On("SQLUpdatePassword", user.Username, user.Password, newpasscrypt).Return(nil)
 	err := uc.ChangePassword(models.ChangePasswordInput{Username: username, OldPassword: password, Password: newpass})
 	assert.NoError(t, err)
 }
@@ -271,10 +271,9 @@ func Test_ChangePassword_Failed_WrongOldPass(t *testing.T) {
 	)
 
 	// Change Password
-	repo.On("SQLGetUser", user.Username, user.Password).Return(user, auth.ErrUnknown)
-	repo.On("SQLUpdatePassword", user.Username, newpasscrypt).Return(nil)
+	repo.On("SQLUpdatePassword", user.Username, user.Password, newpasscrypt).Return(gorm.ErrInvalidTransaction)
 	err := uc.ChangePassword(models.ChangePasswordInput{Username: username, OldPassword: password, Password: newpass})
-	assert.Error(t, err, auth.ErrUserNotFound)
+	assert.Error(t, err, auth.ErrInvalidCreds)
 }
 
 func Test_ChangePassword_Failed_EmptyField(t *testing.T) {

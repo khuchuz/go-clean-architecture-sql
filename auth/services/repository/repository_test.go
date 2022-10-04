@@ -45,7 +45,7 @@ func (s *Suite) SetupSuite() {
 	//defer db.Close()
 }
 
-func (s *Suite) TestSQLCreateUser() {
+func (s *Suite) TestSQLCreateUser_Success() {
 	user := &models.User{
 		Username: "dummy1",
 		Email:    "dummy1@gmail.com",
@@ -62,7 +62,7 @@ func (s *Suite) TestSQLCreateUser() {
 	s.NoError(err)
 }
 
-func (s *Suite) TestSQLGetUser() {
+func (s *Suite) TestSQLGetUser_Success() {
 	var (
 		id       = 10
 		username = "dummy10"
@@ -79,6 +79,23 @@ func (s *Suite) TestSQLGetUser() {
 
 	require.NoError(s.T(), err)
 	require.Nil(s.T(), deep.Equal(&models.User{ID: res.ID, Username: username, Email: email, Password: password}, res))
+}
+
+func (s *Suite) TestSQLGetUser_Failed_NotExist() {
+	var (
+		username = "dummy10"
+		password = hashThis("Password10")
+	)
+
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password"}))
+
+	res, err := s.userRepositorySQL.SQLGetUser(username, password)
+	if assert.Error(s.T(), err) {
+		assert.Equal(s.T(), gorm.ErrRecordNotFound, err)
+	}
+	require.Nil(s.T(), deep.Equal(new(models.User), res))
 }
 
 func (s *Suite) TestSQLIsUserExistByUsername_True() {
@@ -99,20 +116,12 @@ func (s *Suite) TestSQLIsUserExistByUsername_True() {
 }
 
 func (s *Suite) TestSQLIsUserExistByUsername_False() {
-	var (
-		id       = 11
-		username = "dummy11"
-		email    = "akun11@email.com"
-		password = hashThis("Password11")
-	)
+	username := "dummy11"
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ?")).
-		WithArgs(username).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password"}).
-			AddRow(id, username, email, password))
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ?")).WithArgs(username).WillReturnError(gorm.ErrRecordNotFound)
 
 	res := s.userRepositorySQL.SQLIsUserExistByUsername(username)
-	require.Equal(s.T(), true, res)
+	require.Equal(s.T(), false, res)
 }
 
 func (s *Suite) TestSQLIsUserExistByEmail_True() {
@@ -132,18 +141,58 @@ func (s *Suite) TestSQLIsUserExistByEmail_True() {
 	require.Equal(s.T(), true, res)
 }
 
-func (s *Suite) TestSQLUpdatePassword() {
+func (s *Suite) TestSQLIsUserExistByEmail_False() {
+	email := "akun12@email.com"
+
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE email = ?")).WithArgs(email).WillReturnError(gorm.ErrRecordNotFound)
+
+	res := s.userRepositorySQL.SQLIsUserExistByEmail(email)
+	require.Equal(s.T(), false, res)
+}
+
+func (s *Suite) TestSQLUpdatePassword_Success() {
 	var (
-		username = "dummy12"
-		password = hashThis("Password12")
+		username    = "dummy12"
+		password    = hashThis("Password12")
+		oldpassword = hashThis("Password123")
 	)
 	s.mock.ExpectBegin() // start transaction
-	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ?")).
-		WithArgs(password, username).
-		WillReturnResult(sqlmock.NewResult(0, 1))
+	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
+		WithArgs(password, username, oldpassword).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit() // commit transaction
-	err := s.userRepositorySQL.SQLUpdatePassword(username, password)
+	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
 	s.NoError(err)
+}
+
+func (s *Suite) TestSQLUpdatePassword_Failed_MultipleRowAffected() {
+	var (
+		username    = "dummy12"
+		password    = hashThis("Password12")
+		oldpassword = hashThis("Password123")
+	)
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
+		WithArgs(password, username, oldpassword).
+		WillReturnResult(sqlmock.NewResult(0, 2))
+	s.mock.ExpectCommit() // commit transaction
+	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
+	s.Error(err)
+}
+
+func (s *Suite) TestSQLUpdatePassword_Failed_ZeroRowAffected() {
+	var (
+		username    = "dummy12"
+		password    = hashThis("Password12")
+		oldpassword = hashThis("Password123")
+	)
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
+		WithArgs(password, username, oldpassword).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	s.mock.ExpectCommit() // commit transaction
+	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
+	s.Error(err)
 }
 
 func (s *Suite) TestSQLDeleteUser_Success() {
@@ -173,14 +222,33 @@ func (s *Suite) TestSQLDeleteUser_Failed_Select() {
 		username = "dummy10"
 		password = hashThis("Password10")
 	)
-	rows := sqlmock.NewRows([]string{"id", "username", "email", "password"})
+
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).WithArgs(username, password).WillReturnError(gorm.ErrRecordNotFound)
+
+	err := s.userRepositorySQL.SQLDeleteUser(username, password)
+	require.Error(s.T(), err, gorm.ErrRecordNotFound)
+}
+
+func (s *Suite) TestSQLDeleteUser_Failed_Delete() {
+	var (
+		id       = 10
+		username = "dummy10"
+		email    = "akun10@email.com"
+		password = hashThis("Password10")
+	)
+	rows := sqlmock.NewRows([]string{"id", "username", "email", "password"}).AddRow(id, username, email, password)
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
 		WithArgs(username, password).
 		WillReturnRows(rows)
 
+	s.mock.ExpectBegin()
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectCommit()
+
 	err := s.userRepositorySQL.SQLDeleteUser(username, password)
 
-	require.Error(s.T(), err, "record not found")
+	require.NoError(s.T(), err)
 }
 
 func hashThis(password string) string {

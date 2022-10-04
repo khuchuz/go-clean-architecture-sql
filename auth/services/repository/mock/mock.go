@@ -21,8 +21,8 @@ func (s *UserStorageMock) SQLGetUser(username, password string) (*models.User, e
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (s *UserStorageMock) SQLUpdatePassword(username, password string) error {
-	args := s.Called(username, password)
+func (s *UserStorageMock) SQLUpdatePassword(username, oldpassword, password string) error {
+	args := s.Called(username, oldpassword, password)
 
 	return args.Error(0)
 }

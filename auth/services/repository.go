@@ -9,6 +9,6 @@ type UserRepositorySQL interface {
 	SQLGetUser(username, password string) (*models.User, error)
 	SQLIsUserExistByUsername(username string) bool
 	SQLIsUserExistByEmail(email string) bool
-	SQLUpdatePassword(username, password string) error
+	SQLUpdatePassword(username, oldpassword, password string) error
 	SQLDeleteUser(username, password string) error
 }

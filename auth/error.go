@@ -12,4 +12,5 @@ var (
 	ErrUnauthorized       = errors.New("user unauthorized")
 	ErrDataTidakLengkap   = errors.New("data tidak lengkap")
 	ErrPasswordSame       = errors.New("password baru tidak boleh sama dengan password lama")
+	ErrInvalidCreds       = errors.New("invalid credentials")
 )

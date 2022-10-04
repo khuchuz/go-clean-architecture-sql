@@ -24,9 +24,12 @@ func (r *UserRepositorySQL) SQLGetUser(username, password string) (*models.User,
 	return user, err
 }
 
-func (r *UserRepositorySQL) SQLUpdatePassword(username, password string) error {
-	err := r.DB.Model(&models.User{}).Where("username = ?", username).Update("password", password).Error
-	return err
+func (r *UserRepositorySQL) SQLUpdatePassword(username, oldpassword, password string) error {
+	result := r.DB.Model(&models.User{}).Where("username = ?", username).Where("password = ?", oldpassword).Updates(&models.User{Password: password})
+	if result.RowsAffected < 1 || result.RowsAffected > 1 {
+		return gorm.ErrInvalidTransaction
+	}
+	return result.Error
 }
 
 func (r *UserRepositorySQL) SQLIsUserExistByUsername(username string) bool {

@@ -3,6 +3,7 @@ package repository
 import (
 	"crypto/sha1"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"testing"
@@ -60,6 +61,36 @@ func (s *Suite) TestSQLCreateUser_Success() {
 
 	err := s.userRepositorySQL.SQLCreateUser(user)
 	s.NoError(err)
+}
+
+func (s *Suite) TestSQLCreateUser_Failed() {
+	user := &models.User{
+		Username: "dummy1",
+		Email:    "dummy1@gmail.com",
+		Password: hashThis("Dummy123"),
+	}
+
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `users` (`username`,`email`,`password`) VALUES (?,?,?)")).
+		WithArgs(user.Username, user.Email, user.Password).
+		WillReturnError(errors.New("some error"))
+	s.mock.ExpectRollback() // commit transaction
+
+	err := s.userRepositorySQL.SQLCreateUser(user)
+	s.Error(err)
+}
+
+func (s *Suite) TestSQLCreateUser_Failed_atBegin() {
+	user := &models.User{
+		Username: "dummy1",
+		Email:    "dummy1@gmail.com",
+		Password: hashThis("Dummy123"),
+	}
+
+	s.mock.ExpectBegin().WillReturnError(errors.New("some error"))
+
+	err := s.userRepositorySQL.SQLCreateUser(user)
+	s.Error(err)
 }
 
 func (s *Suite) TestSQLGetUser_Success() {
@@ -154,11 +185,13 @@ func (s *Suite) TestSQLUpdatePassword_Success() {
 		password    = hashThis("Password12")
 		oldpassword = hashThis("Password123")
 	)
+
 	s.mock.ExpectBegin() // start transaction
 	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
 		WithArgs(password, username, oldpassword).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit() // commit transaction
+
 	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
 	s.NoError(err)
 }
@@ -169,13 +202,17 @@ func (s *Suite) TestSQLUpdatePassword_Failed_MultipleRowAffected() {
 		password    = hashThis("Password12")
 		oldpassword = hashThis("Password123")
 	)
+
 	s.mock.ExpectBegin() // start transaction
 	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
 		WithArgs(password, username, oldpassword).
-		WillReturnResult(sqlmock.NewResult(0, 2))
-	s.mock.ExpectCommit() // commit transaction
+		WillReturnResult(sqlmock.NewResult(1, 2))
+	s.mock.ExpectRollback() // rollback transaction
+
 	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
-	s.Error(err)
+	if s.Error(err) {
+		assert.Equal(s.T(), gorm.ErrInvalidTransaction, err)
+	}
 }
 
 func (s *Suite) TestSQLUpdatePassword_Failed_ZeroRowAffected() {
@@ -184,26 +221,54 @@ func (s *Suite) TestSQLUpdatePassword_Failed_ZeroRowAffected() {
 		password    = hashThis("Password12")
 		oldpassword = hashThis("Password123")
 	)
+
 	s.mock.ExpectBegin() // start transaction
 	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
 		WithArgs(password, username, oldpassword).
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectCommit() // commit transaction
+		WillReturnResult(sqlmock.NewResult(1, 0))
+	s.mock.ExpectRollback() // rollback transaction
+
+	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
+	if s.Error(err) {
+		assert.Equal(s.T(), gorm.ErrInvalidTransaction, err)
+	}
+}
+
+func (s *Suite) TestSQLUpdatePassword_Failed_ReturnError() {
+	var (
+		username    = "dummy12"
+		password    = hashThis("Password12")
+		oldpassword = hashThis("Password123")
+	)
+
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `users` SET `password`=? WHERE username = ? AND password = ?")).
+		WithArgs(password, username, oldpassword).
+		WillReturnError(errors.New("something went wrong"))
+	s.mock.ExpectRollback() // rollback transaction
+
+	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
+	s.Error(err)
+}
+
+func (s *Suite) TestSQLUpdatePassword_Failed_atBegin() {
+	var (
+		username    = "dummy12"
+		password    = hashThis("Password12")
+		oldpassword = hashThis("Password123")
+	)
+
+	s.mock.ExpectBegin().WillReturnError(errors.New("some error"))
+
 	err := s.userRepositorySQL.SQLUpdatePassword(username, oldpassword, password)
 	s.Error(err)
 }
 
 func (s *Suite) TestSQLDeleteUser_Success() {
 	var (
-		id       = 10
 		username = "dummy10"
-		email    = "akun10@email.com"
 		password = hashThis("Password10")
 	)
-	rows := sqlmock.NewRows([]string{"id", "username", "email", "password"}).AddRow(id, username, email, password)
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).
-		WithArgs(username, password).
-		WillReturnRows(rows)
 
 	s.mock.ExpectBegin()
 	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
@@ -215,16 +280,68 @@ func (s *Suite) TestSQLDeleteUser_Success() {
 	require.NoError(s.T(), err)
 }
 
-func (s *Suite) TestSQLDeleteUser_Failed_Select() {
+func (s *Suite) TestSQLDeleteUser_Failed_atBegin() {
 	var (
-		username = "dummy10"
-		password = hashThis("Password10")
+		username = "dummy123"
+		password = hashThis("Password123")
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND password = ?")).WithArgs(username, password).WillReturnError(gorm.ErrRecordNotFound)
+	s.mock.ExpectBegin().WillReturnError(errors.New("some error"))
 
 	err := s.userRepositorySQL.SQLDeleteUser(username, password)
-	require.Error(s.T(), err, gorm.ErrRecordNotFound)
+	s.Error(err)
+}
+
+func (s *Suite) TestSQLDeleteUser_Failed_MultipleRowAffected() {
+	var (
+		username = "dummy12"
+		password = hashThis("Password123")
+	)
+
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).
+		WillReturnResult(sqlmock.NewResult(1, 2))
+	s.mock.ExpectRollback() // rollback transaction
+
+	err := s.userRepositorySQL.SQLDeleteUser(username, password)
+	if s.Error(err) {
+		assert.Equal(s.T(), gorm.ErrInvalidTransaction, err)
+	}
+}
+
+func (s *Suite) TestSQLDeleteUser_Failed_ZeroRowAffected() {
+	var (
+		username = "dummy12"
+		password = hashThis("Password123")
+	)
+
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).
+		WillReturnResult(sqlmock.NewResult(1, 0))
+	s.mock.ExpectRollback() // rollback transaction
+
+	err := s.userRepositorySQL.SQLDeleteUser(username, password)
+	if s.Error(err) {
+		assert.Equal(s.T(), gorm.ErrInvalidTransaction, err)
+	}
+}
+
+func (s *Suite) TestSQLDeleteUser_Failed_ReturnError() {
+	var (
+		username = "dummy12"
+		password = hashThis("Password123")
+	)
+
+	s.mock.ExpectBegin() // start transaction
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `users` WHERE username = ? AND password = ?")).
+		WithArgs(username, password).
+		WillReturnError(errors.New("some error"))
+	s.mock.ExpectRollback() // rollback transaction
+
+	err := s.userRepositorySQL.SQLDeleteUser(username, password)
+	s.Error(err)
 }
 
 func hashThis(password string) string {
